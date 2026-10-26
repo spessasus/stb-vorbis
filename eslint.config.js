@@ -49,7 +49,10 @@ export default tseslint.config(
             "unicorn/no-new-array": "off",
 
             // I don't like it
-            "unicorn/prefer-at": "off"
+            "unicorn/prefer-at": "off",
+
+            // I don't like it either
+            "unicorn/no-asterisk-prefix-in-documentation-comments": "off"
         }
     },
     {

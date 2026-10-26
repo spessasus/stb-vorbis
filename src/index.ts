@@ -30,11 +30,13 @@ function atobPolyfill(input: string) {
         buffer = (buffer << 6) | value;
         bits += 6;
 
-        if (bits >= 8) {
-            bits -= 8;
-            // eslint-disable-next-line unicorn/prefer-code-point
-            output += String.fromCharCode((buffer >> bits) & 0xff);
+        if (!(bits >= 8)) {
+            continue;
         }
+
+        bits -= 8;
+        // eslint-disable-next-line unicorn/prefer-code-point
+        output += String.fromCharCode((buffer >> bits) & 0xff);
     }
 
     return output;
