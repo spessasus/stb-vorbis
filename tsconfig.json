@@ -28,5 +28,5 @@
         "noEmit": true
     },
     "include": ["./**/*.ts"],
-    "exclude": [".emsdk-cache/**", "node_modules/**", "out/**"]
+    "exclude": [".emsdk-cache/**", "node_modules/**", "out/**", "dist/**"]
 }

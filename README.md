@@ -6,6 +6,7 @@ This decoder is designed for restricted environments, such as an `AudioWorklet`.
 It doesn't use `fetch` or any APIs not available in AudioWorklets and provides a fully synchronous decode method, shipping one JS file.
 The WebAssembly binary is stored as base64-encoded data in the JS file.
 
+Only mono and stereo streams are supported.
 Made for use in [`spessasynth_core`](https://github.com/spessasus/spessasynth_core), but can be used separately.
 
 ## Installation
@@ -27,7 +28,7 @@ const ogg = await fetch("/audio/example.ogg").then((response) =>
 );
 
 // Decode the audio data
-const audio = StbVorbis.decode(ogg); // f32 by default
+const audio = StbVorbis.decode(ogg);
 
 console.log(audio.sampleRate); // For example: 44100
 console.log(audio.channels.length); // Number of channels
@@ -35,7 +36,12 @@ console.log(audio.channels[0]); // Float32Array containing channel 1
 ```
 
 A proper example can be found in the `examples/` directory. It plays the specified Ogg Vorbis file through ffplay.
-Run it using `tsx`.
+Install the dependencies and run it with `tsx`:
+
+```bash
+npm install
+npx tsx examples/decode_and_play.ts path/to/audio.ogg
+```
 
 ## API reference
 
@@ -55,9 +61,9 @@ StbVorbis.decode(data);
 
 Synchronously decodes a complete Vorbis stream in an Ogg Container.
 
-- `data` - `ArrayBufferLike` or `Uint8Array` - the binary Ogg Vorbis data.
+- `data` - `ArrayBufferLike` or `Uint8Array` - the complete binary Ogg Vorbis data.
 
-Throws if the decoder has not been initialized, if the input cannot be decoded, or if WASM memory allocation fails.
+Throws if the decoder has not been initialized, the stream cannot be decoded, or WASM memory allocation fails.
 
 The returned object is described below.
 
@@ -66,12 +72,12 @@ The returned object is described below.
 ```ts
 interface DecodedAudio {
     readonly sampleRate: number;
-    readonly channels: Float32Array[];
+    readonly channels: readonly Float32Array[];
 }
 ```
 
 - `sampleRate` - sample rate in Hz.
-- `channels` - an array of `Float32Array` channel PCM data. All arrays have the same length.
+- `channels` - an array of planar `Float32Array` channel PCM data. All arrays have the same length.
 
 ## Building from source
 
@@ -99,13 +105,13 @@ npm install
 npm run build
 ```
 
-The final build publishes `dist/index.js`, which contains the code and type declarations.
+The final build publishes `dist/index.js`, which contains the code, and `dist/index.d.ts`, which contains type declarations.
 
 ## License
 
 Apache License 2.0.
 
-The included `stb_vorbis.c` source retains its original public-domain dedication. See the bottom of the file for details.
+The included `stb_vorbis.c` source retains its original public-domain or MIT license) dedication. See the bottom of the file for details.
 
 ## Special Thanks
 

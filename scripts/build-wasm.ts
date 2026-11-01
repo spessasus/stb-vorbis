@@ -9,6 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const binaryOutput = path.resolve(root, "out");
 const wasmOutput = path.resolve(binaryOutput, "vorbis.wasm");
 const javascriptOutput = path.resolve(binaryOutput, "vorbis.wasm.js");
+const localTsc = path.resolve(root, "node_modules/.bin/tsc");
 
 // eslint-disable-next-line unicorn/consistent-boolean-name
 async function fileExists(path: string) {
@@ -44,16 +45,17 @@ async function findEmcc() {
     throw new Error("Could not find emcc!");
 }
 
+const emcc = await findEmcc();
+console.info(`EMCC Found: ${emcc}`);
+
 // Remove dist if exists
 await fs.rm(path.resolve(root, "dist"), { recursive: true, force: true });
 await fs.rm(binaryOutput, { recursive: true, force: true });
 await fs.mkdir(path.resolve(root, "dist"), { recursive: true });
 await fs.mkdir(binaryOutput, { recursive: true });
 
-const emcc = await findEmcc();
-console.info(`EMCC Found: ${emcc}`);
 child_process.execFileSync(
-    await findEmcc(),
+    emcc,
     [
         path.resolve(root, "wasm/vorbis_wrapper.c"),
 
@@ -63,6 +65,7 @@ child_process.execFileSync(
         "-sSTANDALONE_WASM=1",
         "-sALLOW_MEMORY_GROWTH=1",
         "-sFILESYSTEM=0",
+        "-sSTACK_SIZE=1048576",
         "-sEXPORTED_RUNTIME_METHODS=[]",
         "-sEXPORTED_FUNCTIONS=_vorbis_decode,_vorbis_free,_malloc,_free",
 
@@ -96,9 +99,8 @@ await esbuild.build({
     logLevel: "info"
 });
 
-// Emit type declarations
 child_process.execFileSync(
-    "tsc",
+    localTsc,
     ["-p", path.resolve(root, "tsconfig.build.json")],
     {
         cwd: root,

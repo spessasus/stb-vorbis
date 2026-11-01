@@ -58,7 +58,7 @@ export interface DecodedAudio {
      *
      * All channel arrays contain the same number of samples.
      */
-    readonly channels: Float32Array[];
+    readonly channels: readonly Float32Array[];
 }
 
 interface VorbisExports {
@@ -78,6 +78,8 @@ interface VorbisExports {
     readonly vorbis_decode: (data: number, length: number) => number;
 
     readonly vorbis_free: (result: number) => void;
+
+    readonly _initialize?: () => void;
 }
 
 /*
@@ -102,30 +104,49 @@ const imports = {
 
 /**
  * Synchronous Ogg Vorbis decoder backed by stb_vorbis.
+ *
+ * Only mono and stereo streams are supported.
  */
 export class StbVorbis {
+    /**
+     * The compiled WebAssembly module, used to recreate the instance after a trap.
+     * @private
+     */
+    private static module: WebAssembly.Module | undefined;
+
     /**
      * The exports of the WebAssembly decoder.
      * @private
      */
     private static exports: VorbisExports | undefined;
+
     /**
      * Resolves when the underlying WebAssembly decoder is initialized.
      */
     // eslint-disable-next-line unicorn/consistent-function-scoping
     public static readonly ready: Promise<void> = (async () => {
-        // WasmData is base64 encoded wasm binary,
-        // As we don't want fetch because this is a decoder made for audioWorklet
-        const binary =
-            "atob" in globalThis ? atob(wasmData) : atobPolyfill(wasmData);
-        const bytes = Uint8Array.from(binary, (character) =>
-            // eslint-disable-next-line unicorn/prefer-code-point
-            character.charCodeAt(0)
-        );
+        try {
+            // WasmData is base64 encoded wasm binary,
+            // As we don't want fetch because this is a decoder made for audioWorklet
+            const binary =
+                typeof globalThis.atob === "function"
+                    ? atob(wasmData)
+                    : atobPolyfill(wasmData);
+            const bytes = Uint8Array.from(binary, (character) =>
+                // eslint-disable-next-line unicorn/prefer-code-point
+                character.charCodeAt(0)
+            );
 
-        const { instance } = await WebAssembly.instantiate(bytes, imports);
-
-        StbVorbis.exports = instance.exports as unknown as VorbisExports;
+            StbVorbis.module = await WebAssembly.compile(bytes);
+            StbVorbis.exports = StbVorbis.createInstance();
+        } catch (error) {
+            throw new Error(
+                `Failed to initialize the Vorbis decoder: ${
+                    error instanceof Error ? error.message : String(error)
+                }`,
+                { cause: error }
+            );
+        }
     })();
 
     /**
@@ -134,26 +155,31 @@ export class StbVorbis {
      * The returned PCM arrays are normal JavaScript-owned typed arrays.
      * No WASM memory is retained after this method returns.
      *
+     * Only mono and stereo streams are supported.
+     *
      * @param data The complete Ogg Vorbis stream.
      * @returns The decoded planar PCM audio.
+     * @throws {Error} if the stream cannot be decoded.
      */
     public static decode(
         data: ArrayBufferLike | Uint8Array<ArrayBufferLike>
     ): DecodedAudio {
-        if (!this.exports) {
+        const exports = StbVorbis.exports;
+
+        if (exports === undefined) {
             throw new Error("Vorbis decoder not ready");
         }
 
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
 
-        const exports = this.exports;
         const memory = exports.memory;
-
         const inputPointer = exports.malloc(bytes.byteLength);
 
         if (inputPointer === 0) {
             throw new Error("Failed to allocate WASM memory for Vorbis input");
         }
+
+        let isInstanceFailed = false;
 
         try {
             // Do not cache this view. WASM memory may grow during allocation,
@@ -163,10 +189,24 @@ export class StbVorbis {
                 bytes
             );
 
-            const resultPointer = exports.vorbis_decode(
-                inputPointer,
-                bytes.byteLength
-            );
+            let resultPointer = 0;
+
+            try {
+                resultPointer = exports.vorbis_decode(
+                    inputPointer,
+                    bytes.byteLength
+                );
+            } catch (error) {
+                if (error instanceof WebAssembly.RuntimeError) {
+                    isInstanceFailed = true;
+                    StbVorbis.resetInstance();
+                    throw new Error("The Vorbis decoder crashed", {
+                        cause: error
+                    });
+                }
+
+                throw error;
+            }
 
             // Returned NULL, which means failure
             if (resultPointer === 0) {
@@ -195,6 +235,12 @@ export class StbVorbis {
 
                 if (channels <= 0 || samples <= 0 || sampleRate <= 0) {
                     throw new Error("Invalid Vorbis decoder result");
+                }
+
+                if (channels > 2) {
+                    throw new Error(
+                        `Channel count of ${channels} is not supported`
+                    );
                 }
 
                 /**
@@ -226,10 +272,44 @@ export class StbVorbis {
                     channels: output
                 };
             } finally {
-                exports.vorbis_free(resultPointer);
+                if (!isInstanceFailed) {
+                    try {
+                        exports.vorbis_free(resultPointer);
+                    } catch {
+                        isInstanceFailed = true;
+                        StbVorbis.resetInstance();
+                    }
+                }
             }
         } finally {
-            exports.free(inputPointer);
+            if (!isInstanceFailed) {
+                try {
+                    exports.free(inputPointer);
+                } catch {
+                    StbVorbis.resetInstance();
+                }
+            }
+        }
+    }
+
+    private static createInstance(): VorbisExports {
+        const module = StbVorbis.module;
+
+        if (module === undefined) {
+            throw new Error("Vorbis decoder module is not initialized");
+        }
+
+        const instance = new WebAssembly.Instance(module, imports);
+        const exports = instance.exports as unknown as VorbisExports;
+        exports._initialize?.();
+        return exports;
+    }
+
+    private static resetInstance(): void {
+        try {
+            StbVorbis.exports = StbVorbis.createInstance();
+        } catch {
+            StbVorbis.exports = undefined;
         }
     }
 }

@@ -45,6 +45,9 @@ export default tseslint.config(
                     checksVoidReturn: false
                 }
             ],
+            // (const { decode } = StbVorbis) breaks with this
+            "unicorn/class-reference-in-static-methods": "off",
+
             // Often used for new Array<type>, more cluttered with Array.from
             "unicorn/no-new-array": "off",
 
