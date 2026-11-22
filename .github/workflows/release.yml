@@ -1,16 +1,66 @@
-name: Create GitHub Release
+name: Release
 
 on:
     push:
         tags:
             - "v*"
 
+permissions:
+    contents: read
+
 concurrency:
-    group: "github-release"
-    cancel-in-progress: true
+    group: "npm-publish"
+    cancel-in-progress: false
 
 jobs:
+    checks:
+        uses: ./.github/workflows/pr-checks.yml
+        permissions:
+            contents: read
+
+    publish-npm:
+        needs: checks
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: read
+            id-token: write
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Check the tag matches package.json
+              env:
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  VERSION="v$(node -p "require('./package.json').version")"
+                  if [ "$VERSION" != "$TAG" ]; then
+                      echo "Tag $TAG does not match package.json version $VERSION"
+                      exit 1
+                  fi
+
+            - name: Setup
+              uses: ./.github/actions/setup
+              with:
+                  emscripten: "true"
+                  registry-url: https://registry.npmjs.org
+
+            - name: Build
+              run: npm run build
+
+            - name: Test and check the package
+              run: |
+                  npm run check:package
+                  STB_VORBIS_ENTRY=../dist/index.js npm test
+
+            - name: Publish to npm registry
+              run: npm publish --provenance --access public --ignore-scripts
+
     create-release:
+        needs: publish-npm
         runs-on: ubuntu-latest
 
         permissions:
