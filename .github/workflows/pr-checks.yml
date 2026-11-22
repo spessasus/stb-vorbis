@@ -17,22 +17,95 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v7
-
-            - name: Setup Emscripten
-              uses: emscripten-core/setup-emsdk@v16
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
-                  version: 6.0.6
-                  actions-cache-folder: .emsdk-cache
+                  persist-credentials: false
 
-            - name: Setup Node
-              uses: actions/setup-node@v7
+            - name: Setup
+              uses: ./.github/actions/setup
               with:
-                  node-version: latest
-                  registry-url: https://registry.npmjs.org
-
-            - name: Install dependencies
-              run: npm ci
+                  emscripten: "true"
 
             - name: Test types and build
               run: npm run build
+
+            - name: Check the wasm size
+              run: |
+                  SIZE=$(stat -c %s out/vorbis.wasm)
+                  echo "vorbis.wasm is $SIZE bytes" | tee -a "$GITHUB_STEP_SUMMARY"
+                  if [ "$SIZE" -gt 150000 ]; then
+                      echo "vorbis.wasm grew past 150000 bytes"
+                      exit 1
+                  fi
+
+            - name: Check the package contents
+              run: npm run check:package
+
+            - name: Test
+              run: npm test
+
+            - name: Upload the build
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: build
+                  path: |
+                      dist
+                      out/vorbis.wasm.js
+
+    test-node:
+        needs: build
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                node-version: [20, 22, 24]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Setup
+              uses: ./.github/actions/setup
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Download the build
+              uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: build
+
+            - name: Test the built bundle
+              run: npm test
+              env:
+                  STB_VORBIS_ENTRY: ../dist/index.js
+
+    native:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Install clang tools
+              run: sudo apt-get update && sudo apt-get install -y clang clang-format clang-tidy
+
+            - name: Lint the C wrapper
+              run: npm run lint:c
+
+            - name: Run the sanitizer build
+              run: npm run test:native
+
+    zizmor:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Lint the workflows
+              uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+              with:
+                  advanced-security: false

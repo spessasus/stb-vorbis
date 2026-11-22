@@ -13,6 +13,7 @@
             "default": "./dist/index.js"
         }
     },
+    "sideEffects": false,
     "engines": {
         "node": ">=18"
     },
@@ -22,9 +23,15 @@
         "format": "prettier . --write",
         "test:types": "npm run lint && tsc -b",
         "build:wasm": "tsx scripts/build-wasm.ts",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "npm run build",
+        "lint:c": "clang-format --dry-run --Werror wasm/vorbis_wrapper.c tests/native/native_decode.c && clang-tidy --quiet wasm/vorbis_wrapper.c -- -std=c11",
+        "test": "tsx --test tests/*.test.ts",
+        "test:native": "mkdir -p out && clang -std=c11 -g -O1 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined tests/native/native_decode.c -lm -o out/native_decode && ./out/native_decode tests/files/*.ogg",
+        "check:package": "publint && attw --pack . --profile esm-only",
+        "check:stb": "tsx scripts/check-stb-version.ts"
     },
     "devDependencies": {
+        "@arethetypeswrong/cli": "^0.18.5",
         "@eslint/js": "^10.0.1",
         "@types/node": "^26.6.5",
         "esbuild": "^0.28.2",
@@ -33,6 +40,7 @@
         "eslint-plugin-unicorn": "^79.0.0",
         "globals": "^17.13.0",
         "prettier": "^3.9.10",
+        "publint": "^0.3.25",
         "tsx": "^4.23.15",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
         "typescript-eslint": "^8.72.1",
@@ -71,8 +79,7 @@
     "files": [
         "dist",
         "README.md",
-        "LICENSE",
-        "package.json"
+        "LICENSE"
     ],
     "homepage": "https://github.com/spessasus/stb-vorbis#readme",
     "allowScripts": {

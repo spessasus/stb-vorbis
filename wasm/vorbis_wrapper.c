@@ -34,9 +34,7 @@ typedef struct {
  * @return 1 on success, 0 if the requested size is too large
  */
 static int vorbis_result_size(
-    const size_t frames,
-    const int channels,
-    size_t* const size
+    const size_t frames, const int channels, size_t* const size
 ) {
     const size_t frame_bytes = (size_t) channels * sizeof(float);
 
@@ -59,12 +57,10 @@ static int vorbis_result_size(
  *
  * Returns NULL on failure.
  */
-VorbisResult* vorbis_decode(
-    const uint8_t* data,
-    const int32_t data_length
-) {
+VorbisResult* vorbis_decode(const uint8_t* data, const int32_t data_length) {
     int error = 0;
-    stb_vorbis* vorbis = stb_vorbis_open_memory(data, data_length, &error, NULL);
+    stb_vorbis* vorbis =
+        stb_vorbis_open_memory(data, data_length, &error, NULL);
 
     if (vorbis == NULL) {
         return NULL;
@@ -146,10 +142,8 @@ VorbisResult* vorbis_decode(
             const size_t new_capacity = capacity_frames * 2;
             size_t new_size = 0;
 
-            if (
-                new_capacity <= capacity_frames ||
-                !vorbis_result_size(new_capacity, channels, &new_size)
-            ) {
+            if (new_capacity <= capacity_frames ||
+                !vorbis_result_size(new_capacity, channels, &new_size)) {
                 free(result);
                 stb_vorbis_close(vorbis);
                 return NULL;
@@ -180,8 +174,7 @@ VorbisResult* vorbis_decode(
      * Testcase: Timbres Of Heaven GM_GS_XG_SFX V 3.4 Final_Vorbis.sf2
      */
     const int is_complete =
-        expected_samples != 0 &&
-        sample_count >= (size_t) expected_samples;
+        expected_samples != 0 && sample_count >= (size_t) expected_samples;
 
     if (decode_error != VORBIS__no_error && !is_complete) {
         free(result);
@@ -193,20 +186,14 @@ VorbisResult* vorbis_decode(
         return NULL;
     }
 
-    if (
-        expected_samples != 0 &&
-        sample_count < (size_t) expected_samples
-    ) {
+    if (expected_samples != 0 && sample_count < (size_t) expected_samples) {
         free(result);
         return NULL;
     }
 
     size_t output_samples = sample_count;
 
-    if (
-        expected_samples != 0 &&
-        (size_t) expected_samples < output_samples
-    ) {
+    if (expected_samples != 0 && (size_t) expected_samples < output_samples) {
         output_samples = (size_t) expected_samples;
     }
 
@@ -217,10 +204,8 @@ VorbisResult* vorbis_decode(
 
     size_t exact_size = 0;
 
-    if (
-        vorbis_result_size(output_samples, channels, &exact_size) &&
-        exact_size < allocated_size
-    ) {
+    if (vorbis_result_size(output_samples, channels, &exact_size) &&
+        exact_size < allocated_size) {
         VorbisResult* shrunk = realloc(result, exact_size);
 
         if (shrunk != NULL) {

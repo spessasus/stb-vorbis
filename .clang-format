@@ -1,0 +1,11 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 80
+PointerAlignment: Left
+SortIncludes: false
+AllowShortFunctionsOnASingleLine: None
+BreakAfterReturnType: None
+SpaceAfterCStyleCast: true
+BinPackParameters: false
+BinPackArguments: false
+AlignAfterOpenBracket: BlockIndent

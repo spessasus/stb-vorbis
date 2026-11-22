@@ -1,0 +1,10 @@
+# The wrapper includes stb_vorbis.c on purpose, it is a single-file library
+Checks: >
+    -*,
+    bugprone-*,
+    clang-analyzer-*,
+    -bugprone-easily-swappable-parameters,
+    -bugprone-suspicious-include,
+    -clang-analyzer-optin.performance.Padding
+WarningsAsErrors: "*"
+HeaderFilterRegex: "wasm/vorbis_wrapper\\.c"

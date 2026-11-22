@@ -71,5 +71,12 @@ export default tseslint.config(
         rules: {
             "unicorn/no-process-exit": "off"
         }
+    },
+    {
+        files: ["tests/**/*.ts"],
+        rules: {
+            // The node:test functions return promises that the runner tracks
+            "@typescript-eslint/no-floating-promises": "off"
+        }
     }
 );
