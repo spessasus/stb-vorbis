@@ -107,11 +107,14 @@ npm run build
 
 The final build publishes `dist/index.js`, which contains the code, and `dist/index.d.ts`, which contains type declarations.
 
+`wasm/stb_vorbis.c` is an unmodified copy of [stb_vorbis v1.25](https://github.com/nothings/stb/blob/033efa1bcb750136ac98e997d53833b758e0089b/stb_vorbis.c) from nothings/stb.
+To update it, replace the file with a newer upstream version and update the version here.
+
 ## License
 
 Apache License 2.0.
 
-The included `stb_vorbis.c` source retains its original public-domain or MIT license) dedication. See the bottom of the file for details.
+The included `stb_vorbis.c` source retains its original public-domain or MIT license dedication. See the bottom of the file for details.
 
 ## Special Thanks
 
