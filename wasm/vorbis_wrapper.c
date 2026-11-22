@@ -172,7 +172,18 @@ VorbisResult* vorbis_decode(
     const int decode_error = stb_vorbis_get_error(vorbis);
     stb_vorbis_close(vorbis);
 
-    if (decode_error != VORBIS__no_error) {
+    /*
+     * Some writers leave bytes after the last page, like SF2Pack banks
+     * that count the RIFF pad byte in the smpl chunk size.
+     * stb_vorbis reports those as an error after the stream has ended,
+     * so keep the result when every expected sample was decoded.0
+     * Testcase: Timbres Of Heaven GM_GS_XG_SFX V 3.4 Final_Vorbis.sf2
+     */
+    const int is_complete =
+        expected_samples != 0 &&
+        sample_count >= (size_t) expected_samples;
+
+    if (decode_error != VORBIS__no_error && !is_complete) {
         free(result);
         return NULL;
     }
