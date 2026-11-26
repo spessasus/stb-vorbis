@@ -15,20 +15,22 @@
     },
     "sideEffects": false,
     "engines": {
-        "node": ">=18"
+        "node": ">=20"
     },
     "scripts": {
-        "build": "npm run test:types && npm run build:wasm",
-        "lint": "eslint .",
-        "format": "prettier . --write",
-        "test:types": "npm run lint && tsc -b",
+        "build": "npm run check && npm run build:wasm",
         "build:wasm": "tsx scripts/build-wasm.ts",
-        "prepublishOnly": "npm run build",
-        "lint:c": "clang-format --dry-run --Werror wasm/vorbis_wrapper.c tests/native/native_decode.c && clang-tidy --quiet wasm/vorbis_wrapper.c -- -std=c11",
-        "test": "tsx --test tests/*.test.ts",
-        "test:native": "mkdir -p out && clang -std=c11 -g -O1 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined tests/native/native_decode.c -lm -o out/native_decode && ./out/native_decode tests/files/*.ogg",
+        "check": "npm run lint && node node_modules/typescript7/bin/tsc -b",
         "check:package": "publint && attw --pack . --profile esm-only",
-        "check:stb": "tsx scripts/check-stb-version.ts"
+        "check:stb": "tsx scripts/check-stb-version.ts",
+        "format": "prettier . --write --list-different",
+        "format:check": "prettier --check .",
+        "lint": "eslint .",
+        "lint:c": "clang-format --dry-run --Werror wasm/vorbis_wrapper.c tests/native/native_decode.c && clang-tidy --quiet wasm/vorbis_wrapper.c -- -std=c11",
+        "prepare": "husky",
+        "prepublishOnly": "npm run build",
+        "test": "tsx --test tests/*.test.ts",
+        "test:native": "mkdir -p out && clang -std=c11 -g -O1 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=undefined tests/native/native_decode.c -lm -o out/native_decode && ./out/native_decode tests/files/*.ogg"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.5",
@@ -39,12 +41,21 @@
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-unicorn": "^79.0.0",
         "globals": "^17.13.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.6.2",
         "prettier": "^3.9.10",
         "publint": "^0.3.25",
         "tsx": "^4.23.15",
-        "typescript": "npm:@typescript/typescript6@^6.0.2",
+        "typescript": "^6.0.3",
         "typescript-eslint": "^8.72.1",
         "typescript7": "npm:typescript@^7.0.2"
+    },
+    "lint-staged": {
+        "*.{ts,js}": [
+            "prettier --write",
+            "eslint --cache --fix"
+        ],
+        "*.{json,md,yml,yaml}": "prettier --write"
     },
     "repository": {
         "type": "git",

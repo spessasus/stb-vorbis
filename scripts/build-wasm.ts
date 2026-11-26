@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const binaryOutput = path.resolve(root, "out");
 const wasmOutput = path.resolve(binaryOutput, "vorbis.wasm");
 const javascriptOutput = path.resolve(binaryOutput, "vorbis.wasm.js");
-const localTsc = path.resolve(root, "node_modules/.bin/tsc");
+const localTsc = path.resolve(root, "node_modules/typescript7/bin/tsc");
 
 // eslint-disable-next-line unicorn/consistent-boolean-name
 async function fileExists(path: string) {
@@ -100,8 +100,8 @@ await esbuild.build({
 });
 
 child_process.execFileSync(
-    localTsc,
-    ["-p", path.resolve(root, "tsconfig.build.json")],
+    process.execPath,
+    [localTsc, "-p", path.resolve(root, "tsconfig.build.json")],
     {
         cwd: root,
         stdio: "inherit"

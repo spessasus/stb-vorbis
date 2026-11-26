@@ -1,10 +1,11 @@
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
 import eslintPluginUnicorn from "eslint-plugin-unicorn";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 import eslint from "@eslint/js";
 
-export default tseslint.config(
+export default defineConfig(
     {
         ignores: ["dist", ".emsdk-cache", "out"]
     },
